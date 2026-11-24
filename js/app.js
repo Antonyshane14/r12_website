@@ -398,46 +398,25 @@ function initializeContactForm() {
         submitButton.disabled = true;
         
         try {
-            // For now, use mailto as fallback since no backend is running
-            // Replace this with actual API call when backend is set up
             const formDataObj = {};
             formData.forEach((value, key) => {
                 formDataObj[key] = value;
             });
-            
-            // Create mailto link
-            const subject = encodeURIComponent(`Cybersecurity Inquiry from ${formDataObj.organization}`);
-            const body = encodeURIComponent(
-                `Name: ${formDataObj.name}\n` +
-                `Organization: ${formDataObj.organization}\n` +
-                `Role: ${formDataObj.role || 'N/A'}\n` +
-                `Email: ${formDataObj.email}\n` +
-                `Phone: ${formDataObj.phone || 'N/A'}\n\n` +
-                `Message:\n${formDataObj.message}`
-            );
-            
-            const mailtoLink = `mailto:antonyshane@rapturetwelve.com,kruthinvinay@rapturetwelve.com?subject=${subject}&body=${body}`;
-            
-            // Open mailto link
-            window.location.href = mailtoLink;
-            
-            showFormStatus('success', 'Opening your email client... Please send the email to complete your inquiry.');
-            form.reset();
-            
-            // Uncomment below when backend is ready:
-            /*
+
             const response = await fetch('/api/contact', {
                 method: 'POST',
-                body: formData
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formDataObj)
             });
-            
-            if (response.ok) {
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
                 showFormStatus('success', 'Message sent successfully! We will contact you within 24 hours.');
                 form.reset();
             } else {
-                throw new Error('Failed to send message');
+                throw new Error(data.message || 'Failed to send message');
             }
-            */
         } catch (error) {
             console.error('Contact form error:', error);
             showFormStatus('error', 'Failed to send message. Please try calling us directly or email us at the addresses provided.');

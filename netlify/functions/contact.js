@@ -3,6 +3,16 @@
 
 const nodemailer = require('nodemailer');
 
+// Escape user input before inserting into HTML to prevent XSS
+function escapeHtml(str) {
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 // Validation function
 function validateContactForm(body) {
     const errors = [];
@@ -68,8 +78,13 @@ function createTransporter() {
 // Main handler function
 exports.handler = async (event, context) => {
     // CORS headers
+    const allowedOrigins = [
+        'https://rapturetwelve.com',
+        'https://www.rapturetwelve.com'
+    ];
+    const origin = event.headers?.origin || '';
     const headers = {
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': allowedOrigins.includes(origin) ? origin : allowedOrigins[0],
         'Access-Control-Allow-Headers': 'Content-Type',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
         'Content-Type': 'application/json'
@@ -115,7 +130,15 @@ exports.handler = async (event, context) => {
         }
         
         const { name, email, organization, role, phone, message } = body;
-        
+
+        // Escape all user inputs for safe HTML insertion
+        const safeName = escapeHtml(name);
+        const safeEmail = escapeHtml(email);
+        const safeOrganization = escapeHtml(organization);
+        const safeRole = role ? escapeHtml(role) : null;
+        const safePhone = phone ? escapeHtml(phone) : null;
+        const safeMessage = escapeHtml(message).replace(/\n/g, '<br>');
+
         // Create email transporter
         const transporter = createTransporter();
         
@@ -123,45 +146,45 @@ exports.handler = async (event, context) => {
         const teamEmailContent = {
             from: process.env.FROM_EMAIL || 'noreply@rapturetwelve.com',
             to: ['antonyshane@rapturetwelve.com', 'kruthinvinay@rapturetwelve.com'],
-            subject: `New Cybersecurity Inquiry - ${organization}`,
+            subject: `New Cybersecurity Inquiry - ${safeOrganization}`,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8f9fa; padding: 20px;">
                     <div style="background: #000; color: #fff; padding: 20px; text-align: center;">
                         <h2 style="margin: 0; font-family: 'Orbitron', monospace;">RAPTURE TWELVE</h2>
                         <p style="margin: 5px 0 0 0; letter-spacing: 2px; font-size: 12px;">INFILTRATE • EXPLOIT • SECURE</p>
                     </div>
-                    
+
                     <div style="background: #fff; padding: 30px; border: 1px solid #ddd;">
                         <h3 style="color: #333; margin-top: 0;">New Contact Form Submission</h3>
-                        
+
                         <table style="width: 100%; border-collapse: collapse;">
                             <tr>
                                 <td style="padding: 10px 0; border-bottom: 1px solid #eee; font-weight: bold; width: 120px;">Name:</td>
-                                <td style="padding: 10px 0; border-bottom: 1px solid #eee;">${name}</td>
+                                <td style="padding: 10px 0; border-bottom: 1px solid #eee;">${safeName}</td>
                             </tr>
                             <tr>
                                 <td style="padding: 10px 0; border-bottom: 1px solid #eee; font-weight: bold;">Email:</td>
-                                <td style="padding: 10px 0; border-bottom: 1px solid #eee;"><a href="mailto:${email}">${email}</a></td>
+                                <td style="padding: 10px 0; border-bottom: 1px solid #eee;"><a href="mailto:${safeEmail}">${safeEmail}</a></td>
                             </tr>
                             <tr>
                                 <td style="padding: 10px 0; border-bottom: 1px solid #eee; font-weight: bold;">Organization:</td>
-                                <td style="padding: 10px 0; border-bottom: 1px solid #eee;">${organization}</td>
+                                <td style="padding: 10px 0; border-bottom: 1px solid #eee;">${safeOrganization}</td>
                             </tr>
-                            ${role ? `
+                            ${safeRole ? `
                             <tr>
                                 <td style="padding: 10px 0; border-bottom: 1px solid #eee; font-weight: bold;">Role:</td>
-                                <td style="padding: 10px 0; border-bottom: 1px solid #eee;">${role}</td>
+                                <td style="padding: 10px 0; border-bottom: 1px solid #eee;">${safeRole}</td>
                             </tr>
                             ` : ''}
-                            ${phone ? `
+                            ${safePhone ? `
                             <tr>
                                 <td style="padding: 10px 0; border-bottom: 1px solid #eee; font-weight: bold;">Phone:</td>
-                                <td style="padding: 10px 0; border-bottom: 1px solid #eee;"><a href="tel:${phone}">${phone}</a></td>
+                                <td style="padding: 10px 0; border-bottom: 1px solid #eee;"><a href="tel:${safePhone}">${safePhone}</a></td>
                             </tr>
                             ` : ''}
                             <tr>
                                 <td style="padding: 10px 0; font-weight: bold; vertical-align: top;">Message:</td>
-                                <td style="padding: 10px 0;">${message.replace(/\n/g, '<br>')}</td>
+                                <td style="padding: 10px 0;">${safeMessage}</td>
                             </tr>
                         </table>
                         
@@ -186,15 +209,15 @@ exports.handler = async (event, context) => {
                         <h2 style="margin: 0; font-family: 'Orbitron', monospace;">RAPTURE TWELVE</h2>
                         <p style="margin: 5px 0 0 0; letter-spacing: 2px; font-size: 12px;">INFILTRATE • EXPLOIT • SECURE</p>
                     </div>
-                    
+
                     <div style="background: #fff; padding: 30px; border: 1px solid #ddd;">
-                        <h3 style="color: #333; margin-top: 0;">Thank you for your inquiry, ${name}</h3>
-                        
-                        <p>We have received your message regarding cybersecurity and AI solutions for ${organization}. Our team will review your requirements and respond within 24 hours.</p>
-                        
+                        <h3 style="color: #333; margin-top: 0;">Thank you for your inquiry, ${safeName}</h3>
+
+                        <p>We have received your message regarding cybersecurity and AI solutions for ${safeOrganization}. Our team will review your requirements and respond within 24 hours.</p>
+
                         <div style="background: #f8f9fa; padding: 20px; margin: 20px 0; border-left: 4px solid #000;">
                             <h4 style="margin: 0 0 10px 0; color: #333;">Your Message:</h4>
-                            <p style="margin: 0; color: #666;">${message.replace(/\n/g, '<br>')}</p>
+                            <p style="margin: 0; color: #666;">${safeMessage}</p>
                         </div>
                         
                         <p>For urgent matters, please contact our leadership team directly:</p>
